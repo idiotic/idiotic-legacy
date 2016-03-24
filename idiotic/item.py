@@ -3,6 +3,7 @@ import datetime
 import logging
 import idiotic
 from idiotic import event, history, utils
+from typing import Union, get_type_hints
 
 LOG = logging.getLogger("idiotic.item")
 
@@ -44,6 +45,7 @@ def command(func):
 
             post_event = event.CommandEvent(self, name, source, kind="after", args=args, kwargs=kwargs)
             self.idiotic.dispatcher.dispatch(post_event)
+    command_decorator.command_annotations = get_type_hints(func)
     return command_decorator
 
 class BaseItem:
@@ -402,11 +404,11 @@ class Dimmer(Toggle):
         self.set(state)
 
     @command
-    def up(self, step=None):
+    def up(self, step: float = None):
         self.set(self.value + (step or self.step))
 
     @command
-    def down(self, step=None):
+    def down(self, step: float = None):
         self.set(self.value - (step or self.step))
 
     @command
@@ -414,7 +416,7 @@ class Dimmer(Toggle):
         self.set(self.max)
 
     @command
-    def set(self, val):
+    def set(self, val: float):
         val = max(min(float(val), 1), 0)
         if not val:
             self.off()
@@ -454,7 +456,7 @@ class Number(BaseItem):
         self.set(state)
 
     @command
-    def set(self, val):
+    def set(self, val: Union[int, float]):
         try:
             self.state = self.kind(val)
         except (ValueError, TypeError):
@@ -470,7 +472,7 @@ class Text(BaseItem):
         self.set(str(state))
 
     @command
-    def set(self, val):
+    def set(self, val: str):
         self.state = str(val)
 
 class Motor(BaseItem):
