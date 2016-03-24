@@ -244,7 +244,14 @@ class BaseItem:
         return self.__command_history
 
     def commands(self):
-        return [k for k in dir(self) if callable(getattr(self, k, None)) and getattr(self, k).__name__ == "command_decorator"]
+        return { k: {
+            "arguments": {
+                l: w for l, w in getattr(self, k).command_annotations.items() if l != "return"
+            }}
+                 for k in dir(self)
+                 if callable(getattr(self, k, None))
+                 and getattr(self, k).__name__ == "command_decorator"
+        }
 
     def pack(self):
         res = {
@@ -613,12 +620,12 @@ class Group(BaseItem):
             item.change_state(state)
 
     def commands(self):
-        res = set()
+        res = {}
 
         for item in self.members:
-            res.update((c for c in item.commands() if c in self.send_commands))
+            res.update({k: c for k, c in item.commands().items() if k in self.send_commands})
 
-        return list(res)
+        return res
 
     @property
     def state(self):
