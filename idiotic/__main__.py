@@ -16,7 +16,7 @@ Options:
   -r --rules=<dir>    Path to rules config directory [default: <base>/rules].
   -i --items=<dir>    Path to items config directory [default: <base>/items].
   -m --modules=<dir>  Path to modules directory [default: <base>/modules].
-  -l --lib=<dir>      Path to idiotic system libraries directory [default: /usr/lib].
+  -l --lib=<dir>      Path to idiotic system libraries directory [default: /usr/lib/idiotic].
   -s --standalone     Run without connecting to other instances.
 """
 
