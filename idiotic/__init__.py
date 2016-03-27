@@ -8,6 +8,7 @@ from flask import Flask, json, request, Response
 from werkzeug.wsgi import DispatcherMiddleware
 from .utils import AttrDict, TaggedDict, mangle_name, join_url, _APIWrapper, IdioticEncoder
 from .dispatch import Dispatcher
+from .version import VERSION
 
 LOG = logging.getLogger("idiotic.init")
 

@@ -1,4 +1,5 @@
 from setuptools import setup, find_packages
+from idiotic import version
 import os
 
 libfiles = []
@@ -8,7 +9,7 @@ for x in os.walk('lib'):
 setup(
     name='idiotic',
     packages=find_packages(exclude=['etc', 'contrib']),
-    version='0.2.0',
+    version=version.LISTED,
     description='Distributed home automation controller',
     long_description="""The idiotic distributed internet of things inhabitance
     controller (idiotic), aims to be an extremely extensible, capable, and most

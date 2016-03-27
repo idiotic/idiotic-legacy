@@ -31,7 +31,7 @@ import logging
 import threading
 import aiohttp.wsgi
 import idiotic
-from idiotic import utils, item, rule, distrib, event
+from idiotic import utils, item, rule, distrib, event, VERSION
 # FIXME: This is sort of a hack, due to dependency resolution order
 # problems (persistence and distrib must import idiotic for the
 # registration hooks). The better solution would be to move concrete
@@ -43,7 +43,7 @@ LOG = logging.getLogger("idiotic.main")
 
 def init():
     # load command-line options
-    arguments = docopt.docopt(__doc__, version="0.2.0")
+    arguments = docopt.docopt(__doc__, version=VERSION)
 
     # All these dashes are stupid
     arguments = {k.lstrip('--'): v for k,v in arguments.items()}
