@@ -5,12 +5,14 @@
 import logging
 from idiotic.utils import jsonified, single_args
 from flask import request
+from idiotic import version
 
 MODULE_NAME = "api"
 
 log = logging.getLogger("module.api")
 
 def configure(global_config, config, api, assets):
+    api.add_url_rule('/api/version', 'give_version', give_version)
     api.add_url_rule('/api/scene/<name>/command/<command>', 'scene_command', scene_command)
     api.add_url_rule('/api/item/<name>/command/<command>', 'item_command', item_command)
     api.add_url_rule('/api/item/<name>/state', 'item_state', item_state, methods=['GET', 'PUT', 'POST'])
@@ -19,6 +21,12 @@ def configure(global_config, config, api, assets):
     api.add_url_rule('/api/items', 'list_items', list_items)
     api.add_url_rule('/api/scenes', 'list_scenes', list_scenes)
     api.add_url_rule('/api/item/<name>', 'item_info', item_info)
+
+@jsonified
+def give_version():
+    return dict(VERSION = version.VERSION,
+                LISTED  = version.LISTED,
+                SOURCE  = version.SOURCE)
 
 @jsonified
 def scene_command(name, command, *_, **__):
