@@ -10,7 +10,8 @@ PATCH = 0
 def scm_version(silent = False):
     try:
         return subprocess.check_output(
-                ['git', 'describe', '--tags', '--dirty=+']
+                ['git', 'describe', '--tags', '--dirty=+'],
+                stderr = subprocess.DEVNULL
             ).decode('UTF-8').strip()
     except subprocess.CalledProcessError as e:
         if not silent:
