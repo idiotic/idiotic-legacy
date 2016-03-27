@@ -1,0 +1,42 @@
+#!/bin/bash
+
+# Make sure bumpversion is installed
+bumpversion -h >/dev/null
+
+if [ "$#" -lt "1" ]; then
+    BUMPTYPE="patch"
+    echo "Version part not specified, assuming 'patch'"
+else
+    BUMPTYPE="$1"
+fi
+
+case "$BUMPTYPE" in
+    "major" | "minor" | "patch")
+	echo "Bumping $BUMPTYPE version..."
+	;;
+
+    *)
+	echo "Usage: $0 [major|minor|patch]"
+	exit 0
+	;;
+esac
+set -e
+
+pushd $(git rev-parse --show-toplevel)
+git checkout master
+git pull --rebase
+echo "vvvvvvvvvv"
+git clean -ndX
+echo "^^^^^^^^^^"
+echo "Warning: The above files will be PERMANENTLY deleted."
+echo -n "Continue? (y/n): "
+read -r RESP
+[[ "$RESP" =~ "y" ]]
+# If this fails it's probably because there
+# is nothing to stash, which is OK.
+git stash save --include-untracked || true
+bumpversion --verbose --dry-run $BUMPTYPE
+python setup.py sdist bdist_wheel upload
+git push origin master --tags
+git stash pop || true
+popd
