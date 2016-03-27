@@ -12,7 +12,7 @@ def scm_version(silent = False):
         return subprocess.check_output(
                 ['git', 'describe', '--tags', '--dirty=+']
             ).decode('UTF-8').strip()
-    except CalledProcessError as e:
+    except subprocess.CalledProcessError as e:
         if not silent:
             print("Could not get git output:", e)
 
