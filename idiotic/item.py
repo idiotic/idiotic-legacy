@@ -584,7 +584,7 @@ class Group(BaseItem):
 
         self.members = members or []
 
-        for item in list(self.members.copy()):
+        for item in list(self.members):
             if self not in item.groups:
                 item.groups.add(self)
 
