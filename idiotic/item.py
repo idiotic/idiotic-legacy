@@ -599,6 +599,8 @@ class Group(BaseItem):
         else:
             self.relay_commands = utils.NeverInDict()
 
+        self.send_commands = {}
+
         if command_send:
             if command_send is True:
                 def dispatch_commands(items, command, *args, **kwargs):
@@ -611,8 +613,6 @@ class Group(BaseItem):
                 self.send_commands = utils.SingleItemDict(command_send)
             elif command_send is not None:
                 self.send_commands = dict(command_send)
-        else:
-            self.send_commands = {}
 
     def change_state(self, state):
         # TODO add a way to override this
