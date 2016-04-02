@@ -54,7 +54,7 @@ class BaseItem:
     nature of its state.
 
     """
-    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None):
+    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s):
         self.name = name
         self._state = None
 
@@ -120,6 +120,8 @@ class BaseItem:
                         interval.do(wrap_update, self, key, func)
             elif isinstance(update, tuple):
                 update[0].do(wrap_update, self, None, update[1])
+
+        self.state_translate = state_translate
 
     def bind_on_command(self, function, **kwargs):
         LOG.debug("Binding on command for {}".format(self))
@@ -190,7 +192,7 @@ class BaseItem:
     def state(self):
         if self.__state_overlay:
             return self.__state_overlay[-1]["state"]
-        return self._state
+        return self.state_translate(self._state)
 
     @state.setter
     def state(self, state):
@@ -285,6 +287,10 @@ class BaseItem:
             res["state"] = self.state
 
         return res
+
+    def state_translator(self, func):
+        self.state_translate = func
+        return func
 
 
 class ItemProxy(BaseItem):
