@@ -18,6 +18,7 @@ def configure(global_config, config, api, assets):
     api.add_url_rule('/api/item/<name>/state', 'item_state', item_state, methods=['GET', 'PUT', 'POST'])
     api.add_url_rule('/api/item/<name>/enable', 'item_enable', item_enable)
     api.add_url_rule('/api/item/<name>/disable', 'item_disable', item_disable)
+    api.add_url_rule('/api/item/<name>/history', 'item_history', item_history)
     api.add_url_rule('/api/items', 'list_items', list_items)
     api.add_url_rule('/api/scenes', 'list_scenes', list_scenes)
     api.add_url_rule('/api/item/<name>', 'item_info', item_info)
@@ -81,6 +82,13 @@ def item_disable(name, *args, **kwargs):
         item.disable()
     except:
         raise ValueError("Item '{}' does not exist!".format(name))
+
+@jsonified
+def item_history(name, *args, **kwargs):
+    args = single_args(request.args)
+
+    item = items[name]
+    return item.state_history.all()
 
 @jsonified
 def list_items(*_, **__):

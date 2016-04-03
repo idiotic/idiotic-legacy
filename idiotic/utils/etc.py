@@ -1,5 +1,6 @@
 import json
 import typing
+import datetime
 import collections
 
 def mangle_name(name):
@@ -40,5 +41,7 @@ class IdioticEncoder(TypeAnnotationEncoder):
             return obj.json()
         elif hasattr(obj, "pack"):
             return obj.pack()
+        elif isinstance(obj, datetime.datetime):
+            return obj.timestamp()
         else:
             return super().default(obj)
