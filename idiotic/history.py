@@ -34,6 +34,29 @@ class History:
         else:
             raise ValueError("time must be datetime")
 
+    def closest(self, time=None, age=None):
+        if isinstance(time, int):
+            time = datetime.datetime.fromtimestamp(seconds=time)
+
+        if age:
+            time = datetime.datetime.now() - datetime.timedelta(seconds=age)
+
+        last_after = None
+        last_before = None
+        for i in reversed(range(len(self.values))):
+            if self.values[i].time <= time:
+                last_before = self.values[i]
+                break
+            else:
+                last_after = self.values[i]
+
+        after_diff = abs(last_after.time - time)
+        before_diff = abs(last_before.time - time)
+        if after_diff < before_diff:
+            return last_after
+        else:
+            return last_before
+
     def at(self, time=None, age=None):
         if isinstance(time, int):
             time = datetime.datetime.fromtimestamp(seconds=time)
