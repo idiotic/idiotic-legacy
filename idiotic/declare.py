@@ -1,5 +1,6 @@
 from idiotic.utils import AlwaysInDict
 from idiotic import timer
+import operator
 import asyncio
 import logging
 import math
@@ -13,6 +14,11 @@ class _ParentProxy:
     def child_changed(self, *args, **kwargs):
         for t in self.targets:
             t.child_changed(*args, **kwargs)
+
+def conditify(obj):
+    if isinstance(obj, Condition):
+        return obj
+    return StaticCondition(obj)
 
 class Condition:
     def __init__(self, parent=None, recalculate_delay=False):
@@ -64,22 +70,138 @@ class Condition:
         return False
 
     def __and__(self, other):
-        return AndCondition(self, other)
+        return AndCondition(self, conditify(other))
 
     def __or__(self, other):
-        return OrCondition(self, other)
+        return OrCondition(self, conditify(other))
 
     def __neg__(self):
-        return NotCondition(self)
+        return NegCondition(self)
 
     def __invert__(self):
         return NotCondition(self)
 
     def __xor__(self, other):
-        return XorCondition(self, other)
+        return XorCondition(self, conditify(other))
+
+    def __lt__(self, other):
+        return LessCondition(self, conditify(other))
+
+    def __le__(self, other):
+        return LessEqualCondition(self, conditify(other))
+
+    def __gt__(self, other):
+        return GreaterCondition(self, conditify(other))
+
+    def __ge__(self, other):
+        return GreaterEqualCondition(self, conditify(other))
+
+    def __eq__(self, other):
+        return EqualCondition(self, conditify(other))
+
+    def __ne__(self, other):
+        return NotEqualCondition(self, conditify(other))
+
+    def __add__(self, other):
+        return AddCondition(self, conditify(other))
+
+    def __sub__(self, other):
+        return SubCondition(self, conditify(other))
+
+    def __mul__(self, other):
+        return MulCondition(self, conditify(other))
+
+    def __truediv__(self, other):
+        return DivCondition(self, conditify(other))
+
+    def __floordiv__(self, other):
+        return FloorDivCondition(self, conditify(other))
+
+    def __mod__(self, other):
+        return ModCondition(self, conditify(other))
+
+    def __pow__(self, other):
+        return PowCondition(self, conditify(other))
 
     def __str__(self):
         return "{}".format(type(self))
+
+class StaticCondition(Condition):
+    def __init__(self, val, **kwargs):
+        super().__init__(**kwargs)
+
+        self.val = val
+
+    def calculate(self):
+        return self.val
+
+class OperatorCondition(Condition):
+    def __init__(self, oper, *children, **kwargs):
+        super().__init__(**kwargs)
+
+        self.oper = oper
+        self.children = children
+
+        self.set_as_parent(*self.children)
+
+    def calculate(self):
+        return self.oper(*[c.state for c in self.children])
+
+class NegCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.le, *args, **kwargs)
+
+class AddCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.add, *args, **kwargs)
+
+class SubCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.sub, *args, **kwargs)
+
+class MulCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.mul, *args, **kwargs)
+
+class DivCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.truediv, *args, **kwargs)
+
+class FloorDivCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.floordiv, *args, **kwargs)
+
+class ModCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.mod, *args, **kwargs)
+
+class PowCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.pow, *args, **kwargs)
+
+class LessCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.lt, *args, **kwargs)
+
+class LessEqualCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.le, *args, **kwargs)
+
+class GreaterCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.gt, *args, **kwargs)
+
+class GreaterEqualCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.ge, *args, **kwargs)
+
+class EqualCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.eq, *args, **kwargs)
+
+class NotEqualCondition(OperatorCondition):
+    def __init__(self, *args, **kwargs):
+        super().__init__(operator.ne, *args, **kwargs)
 
 class AndCondition(Condition):
     def __init__(self, *children, **kwargs):
