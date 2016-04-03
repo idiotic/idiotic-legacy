@@ -1,5 +1,4 @@
 from setuptools import setup, find_packages
-from idiotic import version
 import os
 
 libfiles = []
@@ -13,7 +12,7 @@ def read_license():
 setup(
     name='idiotic',
     packages=find_packages(exclude=['etc', 'contrib']),
-    version=version.LISTED,
+    version='0.2.0',
     description='Distributed home automation controller',
     long_description="""The idiotic distributed internet of things inhabitance
     controller (idiotic), aims to be an extremely extensible, capable, and most
