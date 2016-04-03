@@ -41,7 +41,7 @@ class History:
         if age:
             time = datetime.datetime.now() - datetime.timedelta(seconds=age)
 
-        last_after = None
+        last_after = self.values[-1]
         last_before = None
         for i in reversed(range(len(self.values))):
             if self.values[i].time <= time:
