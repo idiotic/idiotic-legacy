@@ -41,6 +41,9 @@ class History:
         if age:
             time = datetime.datetime.now() - datetime.timedelta(seconds=age)
 
+        if not self.values:
+            return None
+
         last_after = self.values[-1]
         last_before = None
         for i in reversed(range(len(self.values))):
@@ -49,6 +52,9 @@ class History:
                 break
             else:
                 last_after = self.values[i]
+
+        if not last_before:
+            return last_after
 
         after_diff = abs(last_after.time - time)
         before_diff = abs(last_before.time - time)
