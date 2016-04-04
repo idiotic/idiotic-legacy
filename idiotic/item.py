@@ -48,13 +48,14 @@ def command(func):
     command_decorator.command_annotations = get_type_hints(func)
     return command_decorator
 
+@Watch('state')
 class BaseItem:
     """The base class for an item which implements all the basic
     behind-the-scenes functionality and makes no assumptions about the
     nature of its state.
 
     """
-    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s):
+    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s, validator=lambda s:s):
         self.name = name
         self._state = None
 
@@ -122,6 +123,7 @@ class BaseItem:
                 update[0].do(wrap_update, self, None, update[1])
 
         self.state_translate = state_translate
+        self.validator = validator
 
     def bind_on_command(self, function, **kwargs):
         LOG.debug("Binding on command for {}".format(self))
@@ -213,6 +215,12 @@ class BaseItem:
 
         if not self.enabled:
             LOG.info("Ignoring state change on disabled item {}".format(self))
+            return
+
+        try:
+            val = self.validator(val)
+        except:
+            LOG.warn("{} not setting state to {} because it did not validate".format(self, val))
             return
 
         # We don't send an event if there has been literally no change
@@ -463,7 +471,7 @@ class Number(BaseItem):
 
     def __init__(self, *args, kind=float, **kwargs):
         self.kind = kind
-        super().__init__(*args, **kwargs)
+        super().__init__(*args, validator=kind, **kwargs)
 
     def change_state(self, state):
         self.set(state)
