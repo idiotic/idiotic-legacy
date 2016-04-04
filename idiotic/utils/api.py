@@ -12,7 +12,7 @@ def jsonified(func):
             res = func(*args, **kwargs)
         except Exception as e:
             LOG.exception("Exception encountered from API, args={}, kwargs={}".format(args, kwargs))
-            return jsonify({"status": "error", "description": str(e)})
+            return jsonify({"status": "error", "description": str(e), "type": type(e).__name__})
         return jsonify({"status": "success", "result": res})
     return decorator
 
