@@ -1,4 +1,4 @@
-from idiotic.utils import AlwaysInDict
+from idiotic.utils import AlwaysInDict, AttrDict
 from idiotic import timer
 import operator
 import asyncio
@@ -423,6 +423,54 @@ class StateAction(Action):
 
         if self.both != StateAction.NO_STATE:
             self.item.change_state(self.both)
+
+class Watcher(Condition):
+    def __init__(self, name, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.name = name
+        self.cbs = []
+        self.__val = None
+
+    def watch(self, cb):
+        self.cbs.append(cb)
+
+    def unwatch(self, cb):
+        self.cbs.remove(cb)
+
+    @property
+    def val(self):
+        return self.__val
+
+    @val.setter
+    def val(self, val):
+        self.__val = val
+        self.recalculate()
+
+    def calculate(self):
+        return self.__val
+
+class Watch:
+    def __init__(self, *fields):
+        self.fields = fields
+
+    def __call__(self, cls):
+        for field in self.fields:
+            def prop_get(_self):
+                return _self.w[field].val
+
+            def prop_set(_self, val):
+                _self.w[field].val = val
+
+            setattr(cls, field, property(prop_get, prop_set))
+
+        oldinit = getattr(cls, "__init__")
+        def newinit(_self, *args, **kwargs):
+            _self.w = AttrDict()
+            for f in self.fields:
+                _self.w[f] = Watcher(f)
+            oldinit(_self, *args, **kwargs)
+        setattr(cls, "__init__", newinit)
+        return cls
 
 class Rule:
     def __init__(self, condition, both=None, yes=None, no=None):

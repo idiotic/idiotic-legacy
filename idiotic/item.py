@@ -3,6 +3,7 @@ import datetime
 import logging
 import idiotic
 from idiotic import event, history, utils
+from idiotic.declare import Watch
 from typing import Union, get_type_hints
 
 LOG = logging.getLogger("idiotic.item")
