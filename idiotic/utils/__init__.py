@@ -9,8 +9,9 @@ import os
 LOG = logging.getLogger("idiotic.utils")
 
 class AttrDict:
-    def __init__(self, values={}):
+    def __init__(self, values={}, throws=NameError):
         self.__values = dict(values)
+        self.__throws = throws
 
     def _set(self, key, value):
         self.__values[mangle_name(key)] = value
@@ -28,7 +29,7 @@ class AttrDict:
         if mangled in self.__values:
             return self.__values[mangled]
         else:
-            raise NameError("Could not find {} in AttrDict".format(key))
+            raise self.__throws("Not found: " + key)
 
     def __getitem__(self, index):
         return getattr(self, index)

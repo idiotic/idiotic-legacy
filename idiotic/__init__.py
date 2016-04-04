@@ -39,6 +39,12 @@ def _register_persistence(name, cls):
 def _register_scene(name, scene):
     instance._register_scene(name, scene)
 
+class ItemNotFound(Exception):
+    pass
+
+class SceneNotFound(Exception):
+    pass
+
 class Idiotic:
     def __init__(self, config=None, name="idiotic"):
         if config is None:
@@ -46,8 +52,8 @@ class Idiotic:
         self.config = config
         self.name = name
 
-        self.items = TaggedDict()
-        self.scenes = TaggedDict()
+        self.items = TaggedDict(throws=ItemNotFound)
+        self.scenes = TaggedDict(throws=SceneNotFound)
         self.modules = AttrDict()
         self.rule_modules = AttrDict()
         self.item_modules = AttrDict()

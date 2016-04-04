@@ -31,57 +31,42 @@ def give_version():
 
 @jsonified
 def scene_command(name, command, *_, **__):
-    try:
-        scene = scenes[name]
-        if command == "enter":
-            scene.enter()
-        elif command == "exit":
-            scene.exit()
-        else:
-            raise ValueError("{} has no command {}".format(scene, command))
-        return bool(scene)
-    except AttributeError:
-        raise ValueError("Scene '{}' does not exist!".format(name))
+    scene = scenes[name]
+    if command == "enter":
+        scene.enter()
+    elif command == "exit":
+        scene.exit()
+    else:
+        raise ValueError("{} has no command {}".format(scene, command))
+    return bool(scene)
 
 @jsonified
 def item_command(name, command, *_, **kwargs):
     args = single_args(request.args)
-    try:
-        item = items[name]
-        item.command(command, **args)
-        return dict(item=item)
-    except:
-        raise ValueError("Item '{}' does not exist!".format(name))
+    item = items[name]
+    item.command(command, **args)
+    return dict(item=item)
 
 @jsonified
 def item_state(name, *args, **kwargs):
     state = request.data
-    try:
-        item = items[name]
-        if state:
-            if isinstance(state, bytes):
-                state = state.decode('UTF-8')
-            item.state = state
-            #item._set_state_from_context(state, "api")
-        return item.state
-    except:
-        raise ValueError("Item '{}' does not exist!".format(name))
+    item = items[name]
+    if state:
+        if isinstance(state, bytes):
+            state = state.decode('UTF-8')
+        item.state = state
+
+    return item.state
 
 @jsonified
 def item_enable(name, *args, **kwargs):
-    try:
-        item = items[name]
-        item.enable()
-    except:
-        raise ValueError("Item '{}' does not exist!".format(name))
+    item = items[name]
+    item.enable()
 
 @jsonified
 def item_disable(name, *args, **kwargs):
-    try:
-        item = items[name]
-        item.disable()
-    except:
-        raise ValueError("Item '{}' does not exist!".format(name))
+    item = items[name]
+    item.disable()
 
 @jsonified
 def item_history(name, *args, **kwargs):
