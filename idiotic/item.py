@@ -49,35 +49,44 @@ def command(func):
     command_decorator.command_annotations = get_type_hints(func)
     return command_decorator
 
-@Watch('state')
 class BaseItem:
-    """The base class for an item which implements all the basic
-    behind-the-scenes functionality and makes no assumptions about the
-    nature of its state.
+    """
+.. autoclass:: BaseItem
+
+The base class for an item which implements all the basic
+behind-the-scenes functionality and makes no assumptions about the
+nature of its state.
 
     """
-    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s, validator=lambda s:s):
+    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None,
+                 ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s,
+                 validator=lambda s:s, disable_commands=[]):
+        #: The user-friendly label for the item
         self.name = name
         self._state = None
 
         if id is None:
+            #: The machine-friendly ID for the item. By default, this
+            #: is the mangled version of the item's name
             self.id = utils.mangle_name(name)
         else:
             self.id = utils.mangle_name(id)
 
+        #: Whether to generate a state change event when the state is
+        #: updated, but has the same value. Defaults to False
         self.ignore_redundant = ignore_redundant
 
         if tags is None:
+            #: A set of tags for this item. Tags qualified with a
+            #: module name may have implicit behavior, but otherwise
+            #: tags are entirely arbitrary.
             self.tags = set()
         else:
             self.tags = set(tags)
 
-        if friends is None:
-            self.friends = {}
-        else:
-            self.friends = friends
-
         if groups is None:
+            #: A set of groups for this item. The item is also
+            #: automatically added to these groups
             self.groups = set()
         else:
             self.groups = set(groups)
@@ -86,10 +95,21 @@ class BaseItem:
             group.add(self)
 
         if aliases is None:
+            #: A mapping of alias command names to actual command
+            #: names. The alias will appear as a normal command for
+            #: all intents and purposes
             self.aliases = {}
         else:
             self.aliases = aliases
 
+        #: A list of commands to disable for this item. They will
+        #: not appear in the commands list and will be replaced with
+        #: a noop
+        self.disable_commands = disable_commands
+
+        #: Whether or not this item is disabled. When disabled, it
+        #: will ignore all commands and state changes given to it,
+        #: until it is enabled again
         self.enabled = True
 
         self.__command_history = history.History()
@@ -123,7 +143,13 @@ class BaseItem:
             elif isinstance(update, tuple):
                 update[0].do(wrap_update, self, None, update[1])
 
+        #: A function that accepts a state and returns a new value to
+        #: use for it
         self.state_translate = state_translate
+
+        #: A function that accepts a state and will raise an exception
+        #: when it is not valid. When a state is received that causes
+        #: an exception, it will be ignored
         self.validator = validator
 
     def bind_on_command(self, function, **kwargs):
