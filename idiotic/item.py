@@ -93,6 +93,8 @@ class BaseItem:
         else:
             self.aliases = aliases
 
+        self.disable_commands = disable_commands
+
         self.enabled = True
 
         self.__command_history = history.History()
