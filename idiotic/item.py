@@ -23,6 +23,9 @@ def command(func):
         else:
             name = func.__name__
 
+        if name in self.disable_commands:
+            LOG.debug("Ignoring disabled command {} on {}".format(name, self))
+
         LOG.debug("@command({}) on {}".format(name, self))
 
         if not self.enabled:
@@ -56,7 +59,7 @@ class BaseItem:
     nature of its state.
 
     """
-    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s, validator=lambda s:s):
+    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s, validator=lambda s:s, disable_commands=[]):
         self.name = name
         self._state = None
 
@@ -262,6 +265,7 @@ class BaseItem:
                  for k in dir(self)
                  if callable(getattr(self, k, None))
                  and getattr(self, k).__name__ == "command_decorator"
+                 and k not in self.disable_commands
         }
 
     def pack(self):
