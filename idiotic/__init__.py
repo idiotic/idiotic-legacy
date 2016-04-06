@@ -97,7 +97,7 @@ class Idiotic:
         item.idiotic = self
 
     def _register_scene(self, name, scene):
-        self.scenes._set(name, scene)
+        self.scenes._set(mangle_name(name), scene)
         scene.idiotic = self
 
     def _register_module(self, module, assets=None):
