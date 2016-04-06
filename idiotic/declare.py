@@ -527,9 +527,7 @@ class Rule:
             else:
                 funcs()
         else:
-            LOG.error(funcs)
             for func in funcs:
-                LOG.error(func)
                 self.__dispatch_func(func, status, include_status)
 
     def child_changed(self, child, status):
