@@ -459,6 +459,26 @@ class Dimmer(Toggle):
         res.update({"value": self.value})
         return res
 
+class SelectorToggle(BaseItem):
+    def __init__(self, *args, options=[], **kwargs):
+        super().__init__(validator=lambda n: n in self.options, *args, **kwargs)
+
+        self.options = options
+        self.last = None
+
+    @command
+    def off(self):
+        self.last = self.state
+        self.state = False
+
+    @command
+    def on(self):
+        self.state = self.last
+
+    @command
+    def select(self, option: str):
+        self.state = option
+
 class Trigger(BaseItem):
     """An item with no state, but which may be activated repeatedly,
     triggering a distinct command each time.
