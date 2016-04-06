@@ -2,161 +2,108 @@ Introduction
 ============
 
 The idiotic distributed internet of things inhabitance controller
-(idiotic), aims to be an extremely extensible, capable, and most
-importantly developer-and-user-friendly solution for mashing together a
-wide assortment of existing home automation technologies into something
-which is useful as a whole. It is also intended to provide a relatively
-painless transition for users of
-`OpenHAB <https://github.com/openhab/openhab>`__, its inspiration.
-
-Philosophy
-==========
-
-My first experience with a centralized home automation system was with
-the aforementioned OpenHAB. At first, I was very excited to find
-something which could finally integrate the hodge-podge of devices,
-protocols, and random scripts that previously controlled the house in
-their own separate, disconnected ways. However, I ran into walls at
-every step: the syntax was inflexible and inconsistent, the
-documentation was incomplete, and I found myself repeating code
-constantly. There were no bindings for much of the technology I had
-hoped to integrate, and creating a new one was needlessly complex. And
-because almost all my sensors and other devices were attached to a
-device other than my OpenHAB server, I was eventually just using the
-HTTP binding to control external scripts I wrote myself.
-
-I decided that this was not the way things should work. Implementing new
-bindings should be as easy as dropping a couple functions into a
-directory. Rules shouldn't be written in `the most enterprisey scripting
-language ever <http://xtend-lang.org>`__. Each configuration file
-shouldn't have its own completely unique syntax. A system designed for
-controlling something as complex as a home should be *flexible*!
-
-idiotic is designed with these goals in mind:
-
--  Be stupidly simple to configure, use, and extend
--  Be flexible
--  Be consistent
--  Be reusable
--  Be modular
+(idiotic) is a clusterable home automation controller that can combine
+any number of disconnected home automation technologies into a single
+unified inetrface. Inspired by `OpenHAB
+<https://github.com/openhab/openhab>`__, idiotic aims to improve over
+many of its shortcomings. Mostly, it's written in Python and all its
+configuration is also just Python, so writing more advanced rules is
+just as easy as writing simple ones and there's no convoluted syntax
+to learn. Also, it's MIT licensed if you like that sort of thing.
 
 Features
 ========
 
-*Note that idiotic is currently in a very immature beta version. It will
-at times have incomplete or missing features, weird bugs and
-inconsistencies, and lack support for pretty much everything.* If you're
-not the kind of person who wants something that was written mostly at
-4AM in control of your house and all the things in it, then you should
-probably hold off on using idiotic. If you're the kind of person who
-enjoys filing bug reports or even making pull requests and won't sue if
-your coffee machine turns against you because of a typo, then you're
-probably going to like idiotic. If you're feeling particularly
-adventurous, you could even head over to
-`idiotic-modules <https://github.com/umbc-hackafe/idiotic-modules/>`__
-and see if you could help write modules to support more third-party
-protocols.
-
-With that said, I'm currently using idiotic for my own house and it
-hasn't yet resulted in catastrophe. The features which have been
-implemented are almost stable at this point and idiotic is designed in a
-way that tends to eliminate single points of failure.
+Disclaimer: idiotic is currently in alpha. It might break sometimes!
+So far it has only tried to revolt once, but don't sue me if it goes
+crazy and floods your house with coffee.
 
 Uniform Configuration
 ---------------------
 
-Every configuration file in idiotic is just a specialized Python module.
-Generally, you just need to define items, rules, or constants, but you
-can also get creative and define these programatically if you need to
-(or do anything else you need to -- it's just Python!).
+Every configuration file in idiotic is just a specialized Python
+module. idiotic provides some basic building blocks that can easily
+and clearly express many of the most common home automation
+tasks, and does them using normal Python objects.
 
 Lightweight and Modular
 -----------------------
 
-Because of the need for flexibility, idiotic itself aims to be mostly
-infrastructure. The rest is up to the module system, which means that
-anyone can add core functionality into idiotic without having to modify
-the source code directly. There is a basic set of modules that are
-included with idiotic in packages for convenience, but these can be
-replaced or removed if you desire. So adding support for new home
-automation protocols can be done externally by just dropping a python
-script into a directory, but still with all the power of the underlying
-codebase.
+Because of the need for flexibility, idiotic's core does not contain
+any technology-specific code. Instead, the core is just the scheduler
+and some built-in generic items. Everything else is done in modules,
+where you specify which real-world actions your items will have.
 
-Simple and Intuitive Rule Creation
+Declarative Rules
 ----------------------------------
 
-idiotic uses `schedule <https://github.com/dbader/schedule>`__ for its
-simple, human-friendly time-based job scheduling syntax, and a simple
-decorator-based syntax for binding to any event in the system. Rule
-bindings can also be augmented to make some common patterns encountered
-in home automation extremely simple and reduce the need for boilerplate
-code.
-
-Want to do something whenever an item changes?
+idiotic supports defining declarative rules. These make it very easy
+to avoid duplicating logic and keeping track of several conditions
+independently. With a declarative rule, you define your logic and the
+action it should take, and the rule takes care of updating the action
+whenever the result of the logic changes.
 
 ::
 
-    @bind(Change(item.foo))
-    def rule(event):
-        print("Wow, how exciting!")
+    # This will let us reference our items and modules
+    from idiotic import instance as c
 
-Want to call a rule every Tuesday at 7:15pm?
+    from idiotic.declare import Rule
 
-::
+    # Items have a 'w' attribute, short for 'watchers', which
+    # lets us reference the watchable version of some attributes.
+    # For basic items, 'state' is the main one you'll use.
+    Rule(c.items.temperature.w.state >= 25,
+         yes=lambda: print("Wow, it's super hot!"),
+	 no=lambda: print("It's kind of okay."))
 
-    @bind(Schedule(scheduler.every().tuesday.at("19:25")))
-    def rule(event):
-        print("Wooo, party time!")
 
-Want to control a light with a motion sensor to turn off after five
-minutes?
+    # Scenes can be used in rules directly
+    # We can make logic expressions with the bitwise operators
+    Rule(c.scenes.house_occupied & ~c.scenes.daytime,
+         yes=c.items.lights.on,
+	 no=c.items.lights.off)
 
-::
-
-    @bind(Command(items.motion_sensor))
-    @augment(Delay(Command(items.motion_sensor, "OFF"), period=300),
-                   cancel=Command(items.motion_sensor, "ON"))
-    def rule(event):
-        items.light.command(event.command)
-
-Have a lot of lights? Just use a loop!
+You can also use the simpler decorator-based rules.
 
 ::
+    @bind(Change(c.items.temperature)
+    def do_a_thing(event):
+        if event.new > event.old:
+	    print("It went up by " + (event.new - event.old))
+	else:
+	    print("It went down by " + (event.old - event.new))
 
-    for sensor, light in [(items.some_sensor, items.some_light),
-                          (items.another_sensor, items.another_light),
-                          (items.last_sensor, items.last_light)]:
-        # Weird scope stuff makes us use closures
-        def closure(s, l):
-            @bind(Command(sensor))
-            @augment(Delay(Command(s, "OFF"), period=300),
-                     cancel=Command(s, "ON"))
-            def rule(event):
-                l.command(event.command)
-        closure(s, l)
+Timer rules can be created, using `schedule
+<https://github.com/dbader/schedule>`__ for nice friendly scheduling
+syntax.
+
+::
+    @bind(Schedule(c.scheduler.every().tuesday.at('19:25')))
+    def timer(event):
+        print("It's 7:25!!!")
+	c.items.lights.on()
 
 Flexible Web-interface Creation
 -------------------------------
 
-With idiotic, you can quickly create rich, dynamic control panels and
-status displays without touching any HTML, CSS, or Javascript -- or you
-can use your own CSS, HTML, and Javascript to enhance and customize the
-web interface however you like.
+With the built-in `idiotic-webui module
+<https://github.com/idiotic/idiotic-webui>`__, you can create custom,
+nice-looking, and powerful control panels without touching HTML or
+Javascript.
 
 Distributed Architecture
 ------------------------
 
-With the advent of cheap physical computing, a smarthome can have many
-devices attached to many different physical computers. With a
-centralized system, this necessitates the creation of an additional
-layer of communication. With idiotic, you can simply run an instance on
-each computer whose devices you want to include, and then control them
-from any other instance as though they were local. *This is pretty close
-to being complete, but lacks some arguably important features.*
+*Danger! This is not quite done yet :(*
+
+If you're planning on adding lots of sensors to your home or you're
+stuck with some less-than-cooperative technologies, a Raspberry Pi
+with some stuff plugged in the GPIO pins is about the best you can
+get. That's why you can cluster idiotic across several devices.
 
 REST API
 --------
 
-idiotic comes with an easily extensible REST API, with an optional
-compatibility layer for mimicking OpenHAB's REST API.
+idiotic comes with an easily extensible REST API. It also has an
+OpenHAB-compatible API, for backwards compatibility. 
