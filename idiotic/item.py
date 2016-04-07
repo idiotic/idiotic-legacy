@@ -52,7 +52,6 @@ def command(func):
     command_decorator.command_annotations = get_type_hints(func)
     return command_decorator
 
-@Watch('state')
 class BaseItem:
     """The base class for an item which implements all the basic
     behind-the-scenes functionality and makes no assumptions about the
