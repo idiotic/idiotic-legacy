@@ -58,7 +58,9 @@ class BaseItem:
     nature of its state.
 
     """
-    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s, validator=lambda s:s, disable_commands=[]):
+    def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None, ignore_redundant=False,
+                 aliases=None, id=None, state_translate=lambda s:s, validator=lambda s:s, disable_commands=[],
+                 display=lambda s:s.state):
         self.name = name
         self._state = None
 
@@ -95,6 +97,8 @@ class BaseItem:
         self.disable_commands = disable_commands
 
         self.enabled = True
+
+        self.display = display
 
         self.__command_history = history.History()
         self.__state_history = history.History()
@@ -381,6 +385,13 @@ class Toggle(BaseItem):
     toggled, and which is not affected by repeated identical commands.
 
     """
+
+    DisplayOnOff = lambda s: "On" if s.state else "Off"
+    DisplayOpenClosed = lambda s: "Open" if s.state else "Closed"
+    DisplayClosedOpen = lambda s: "Closed" if s.state else "Open"
+    DisplayPresentGone = lambda s: "Present" if s.state else "Away"
+    DisplayActiveInactive = lambda s: "Active" if s.state else "Inactive"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -419,7 +430,11 @@ class Dimmer(Toggle):
 
     """
 
+    DisplayOnOffPercent = lambda s: "On" if s.state == s.max else ("{:.0f}%" if s.state else "Off")
+
     def __init__(self, *args, min=0, max=1, step=.05, **kwargs):
+        if "display" not in kwargs:
+            kwargs["display"] = Dimmer.DisplayOnOffPercent
         super().__init__(*args, **kwargs)
 
         self.min = min
@@ -461,7 +476,10 @@ class Dimmer(Toggle):
         return res
 
 class SelectorToggle(BaseItem):
+    StateOffDisplay = lambda s: str(s.state).title() if s.state else "Off"
     def __init__(self, *args, options=[], **kwargs):
+        if "display" not in kwargs:
+            kwargs["display"] = lambda s: "Off" if s.state == False else str(s.state).title()
         super().__init__(validator=lambda n: n in self.options, *args, **kwargs)
 
         self.options = options
@@ -495,8 +513,18 @@ class Trigger(BaseItem):
 class Number(BaseItem):
     """An item which represents a numerical quantity of some sort."""
 
+    def DisplayFormatted(fmtstring):
+        def fmt(s):
+            return fmtstring.format(s.kind(s.state))
+        return fmt
+
     def __init__(self, *args, kind=float, **kwargs):
         self.kind = kind
+        if "display" in kwargs:
+            if kind is float:
+                kwargs["display"] = Number.DisplayFormatted("{:.2f}")
+            elif kind is int:
+                kwargs["display"] = Number.DisplaFormatted("{:d}")
         super().__init__(*args, validator=kind, **kwargs)
 
     def change_state(self, state):
