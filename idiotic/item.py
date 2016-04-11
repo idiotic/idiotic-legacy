@@ -8,6 +8,10 @@ from typing import Union, get_type_hints
 
 LOG = logging.getLogger("idiotic.item")
 
+def default_command(func):
+    setattr(func, "default", True)
+    return func
+
 def command(func):
     def command_decorator(self, *args, **kwargs):
         # If we get passed a source (e.g., UI, Rule, Binding), consume
@@ -266,7 +270,8 @@ class BaseItem:
         return { k: {
             "arguments": {
                 l: w for l, w in getattr(self, k).command_annotations.items() if l != "return"
-            }}
+            }, "default": getattr(getattr(self, k), "default", False),
+        }
                  for k in dir(self)
                  if callable(getattr(self, k, None))
                  and getattr(self, k).__name__ == "command_decorator"
@@ -417,6 +422,7 @@ class Toggle(BaseItem):
     def off(self):
         self.state = False
 
+    @default_command
     @command
     def toggle(self):
         if self.state:
@@ -506,6 +512,7 @@ class Trigger(BaseItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @default_command
     @command
     def trigger(self):
         pass
@@ -530,6 +537,7 @@ class Number(BaseItem):
     def change_state(self, state):
         self.set(state)
 
+    @default_command
     @command
     def set(self, val: Union[int, float]):
         try:
@@ -560,6 +568,7 @@ class Text(BaseItem):
     def change_state(self, state):
         self.set(str(state))
 
+    @default_command
     @command
     def set(self, val: str):
         self.state = str(val)
