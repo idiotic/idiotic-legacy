@@ -537,6 +537,20 @@ class Number(BaseItem):
         except (ValueError, TypeError):
             LOG.warn("Invalid {} argument to Number.set: {}".format(self.kind.__name__, val))
 
+    @command
+    def add(self, val: Union[int, float]):
+        try:
+            self.state += self.kind(val)
+        except (ValueError, TypeError):
+            LOG.warn("Invalid {} argument to Number.add: {}".format(self.kind.__name__, val))
+
+    @command
+    def sub(self, val: Union[int, float]):
+        try:
+            self.state -= self.kind(val)
+        except (ValueError, TypeError):
+            LOG.warn("Invalid {} argument to Number.sub: {}".format(self.kind.__name__, val))
+
 class Text(BaseItem):
     """An item which represents a blob of text."""
 
