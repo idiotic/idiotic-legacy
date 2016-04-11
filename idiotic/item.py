@@ -301,6 +301,7 @@ class BaseItem:
             "tags": list(self.tags),
             "enabled": self.enabled,
             "commands": self.commands(),
+            "display": self.display(),
             "methods": [k for k in dir(self) if callable(getattr(self, k, None))
                         and not k.startswith('_')],
             "aliases": self.aliases,
