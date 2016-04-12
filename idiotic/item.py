@@ -266,6 +266,14 @@ class BaseItem:
     def command_history(self):
         return self.__command_history
 
+    @property
+    def display(self):
+        return self._display(self)
+
+    @display.setter
+    def display(self, val):
+        self._display = val
+
     def commands(self):
         return { k: {
             "arguments": {
