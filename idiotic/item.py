@@ -309,7 +309,7 @@ class BaseItem:
             "tags": list(self.tags),
             "enabled": self.enabled,
             "commands": self.commands(),
-            "display": self.display(),
+            "display": self.display,
             "methods": [k for k in dir(self) if callable(getattr(self, k, None))
                         and not k.startswith('_')],
             "aliases": self.aliases,
@@ -445,7 +445,7 @@ class Dimmer(Toggle):
 
     """
 
-    DisplayOnOffPercent = lambda s: "On" if s.state == s.max else ("{:.0f}%" if s.state else "Off")
+    DisplayOnOffPercent = lambda s: "On" if s.state == s.max else ("{:.0f}%".format(float(s.state)) if s.state and isinstance(s.state, float) else "Off")
 
     def __init__(self, *args, min=0, max=1, step=.05, **kwargs):
         if "display" not in kwargs:
