@@ -10,6 +10,8 @@ from .utils import AttrDict, TaggedDict, mangle_name, join_url, _APIWrapper, Idi
 from .dispatch import Dispatcher
 from .version import VERSION
 
+__all__ = ['declare', 'dispatch', 'event', 'history', 'item', 'modutils', 'persistence', 'rule', 'scene', 'timer', 'version', 'distrib', 'utils']
+
 LOG = logging.getLogger("idiotic.init")
 
 # Monkeypatch schedule so nobody has to deal with it directly
