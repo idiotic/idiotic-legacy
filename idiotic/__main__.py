@@ -194,7 +194,8 @@ def main():
         server = loop.create_server(lambda: aiohttp.wsgi.WSGIServerHttpProtocol(instance.api, readpayload=True), listen, port)
         loop.run_until_complete(asyncio.gather(instance.run_scheduled_jobs(),
                                                server,
-                                               instance.dispatcher.run()))
+                                               instance.dispatcher.run(),
+                                               *[mod.run() for mod in instance.modules.all() if hasattr(mod, "run")]))
     except KeyboardInterrupt:
         LOG.info("Shutting down")
         shutdown(instance)

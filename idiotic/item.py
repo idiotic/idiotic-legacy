@@ -8,6 +8,10 @@ from typing import Union, get_type_hints
 
 LOG = logging.getLogger("idiotic.item")
 
+def default_command(func):
+    setattr(func, "default", True)
+    return func
+
 def command(func):
     def command_decorator(self, *args, **kwargs):
         # If we get passed a source (e.g., UI, Rule, Binding), consume
@@ -22,6 +26,9 @@ def command(func):
             name = kwargs["command"]
         else:
             name = func.__name__
+
+        if name in self.disable_commands:
+            LOG.debug("Ignoring disabled command {} on {}".format(name, self))
 
         LOG.debug("@command({}) on {}".format(name, self))
 
@@ -60,7 +67,7 @@ nature of its state.
     """
     def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None,
                  ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s,
-                 validator=lambda s:s, disable_commands=[]):
+                 validator=lambda s:s, disable_commands=[], display=lambda s:s.state):
         #: The user-friendly label for the item
         self.name = name
         self._state = None
@@ -111,6 +118,8 @@ nature of its state.
         #: will ignore all commands and state changes given to it,
         #: until it is enabled again
         self.enabled = True
+
+        self.display = display
 
         self.__command_history = history.History()
         self.__state_history = history.History()
@@ -280,14 +289,24 @@ nature of its state.
     def command_history(self):
         return self.__command_history
 
+    @property
+    def display(self):
+        return self._display(self)
+
+    @display.setter
+    def display(self, val):
+        self._display = val
+
     def commands(self):
         return { k: {
             "arguments": {
                 l: w for l, w in getattr(self, k).command_annotations.items() if l != "return"
-            }}
+            }, "default": getattr(getattr(self, k), "default", False),
+        }
                  for k in dir(self)
                  if callable(getattr(self, k, None))
                  and getattr(self, k).__name__ == "command_decorator"
+                 and k not in self.disable_commands
         }
 
     def pack(self):
@@ -313,6 +332,7 @@ nature of its state.
             "tags": list(self.tags),
             "enabled": self.enabled,
             "commands": self.commands(),
+            "display": self.display,
             "methods": [k for k in dir(self) if callable(getattr(self, k, None))
                         and not k.startswith('_')],
             "aliases": self.aliases,
@@ -402,6 +422,13 @@ class Toggle(BaseItem):
     toggled, and which is not affected by repeated identical commands.
 
     """
+
+    DisplayOnOff = lambda s: "On" if s.state else "Off"
+    DisplayOpenClosed = lambda s: "Open" if s.state else "Closed"
+    DisplayClosedOpen = lambda s: "Closed" if s.state else "Open"
+    DisplayPresentGone = lambda s: "Present" if s.state else "Away"
+    DisplayActiveInactive = lambda s: "Active" if s.state else "Inactive"
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -427,6 +454,7 @@ class Toggle(BaseItem):
     def off(self):
         self.state = False
 
+    @default_command
     @command
     def toggle(self):
         if self.state:
@@ -440,7 +468,11 @@ class Dimmer(Toggle):
 
     """
 
+    DisplayOnOffPercent = lambda s: "On" if s.state == s.max else ("{:.0f}%".format(float(s.state)) if s.state and isinstance(s.state, float) else "Off")
+
     def __init__(self, *args, min=0, max=1, step=.05, **kwargs):
+        if "display" not in kwargs:
+            kwargs["display"] = Dimmer.DisplayOnOffPercent
         super().__init__(*args, **kwargs)
 
         self.min = min
@@ -481,6 +513,29 @@ class Dimmer(Toggle):
         res.update({"value": self.value})
         return res
 
+class SelectorToggle(BaseItem):
+    StateOffDisplay = lambda s: str(s.state).title() if s.state else "Off"
+    def __init__(self, *args, options=[], **kwargs):
+        if "display" not in kwargs:
+            kwargs["display"] = lambda s: "Off" if s.state == False else str(s.state).title()
+        super().__init__(validator=lambda n: n in self.options, *args, **kwargs)
+
+        self.options = options
+        self.last = None
+
+    @command
+    def off(self):
+        self.last = self.state
+        self.state = False
+
+    @command
+    def on(self):
+        self.state = self.last
+
+    @command
+    def select(self, option: str):
+        self.state = option
+
 class Trigger(BaseItem):
     """An item with no state, but which may be activated repeatedly,
     triggering a distinct command each time.
@@ -489,6 +544,7 @@ class Trigger(BaseItem):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+    @default_command
     @command
     def trigger(self):
         pass
@@ -496,19 +552,44 @@ class Trigger(BaseItem):
 class Number(BaseItem):
     """An item which represents a numerical quantity of some sort."""
 
+    def DisplayFormatted(fmtstring):
+        def fmt(s):
+            return fmtstring.format(s.kind(s.state))
+        return fmt
+
     def __init__(self, *args, kind=float, **kwargs):
         self.kind = kind
+        if "display" in kwargs:
+            if kind is float:
+                kwargs["display"] = Number.DisplayFormatted("{:.2f}")
+            elif kind is int:
+                kwargs["display"] = Number.DisplaFormatted("{:d}")
         super().__init__(*args, validator=kind, **kwargs)
 
     def change_state(self, state):
         self.set(state)
 
+    @default_command
     @command
     def set(self, val: Union[int, float]):
         try:
             self.state = self.kind(val)
         except (ValueError, TypeError):
             LOG.warn("Invalid {} argument to Number.set: {}".format(self.kind.__name__, val))
+
+    @command
+    def add(self, val: Union[int, float]):
+        try:
+            self.state += self.kind(val)
+        except (ValueError, TypeError):
+            LOG.warn("Invalid {} argument to Number.add: {}".format(self.kind.__name__, val))
+
+    @command
+    def sub(self, val: Union[int, float]):
+        try:
+            self.state -= self.kind(val)
+        except (ValueError, TypeError):
+            LOG.warn("Invalid {} argument to Number.sub: {}".format(self.kind.__name__, val))
 
 class Text(BaseItem):
     """An item which represents a blob of text."""
@@ -519,6 +600,7 @@ class Text(BaseItem):
     def change_state(self, state):
         self.set(str(state))
 
+    @default_command
     @command
     def set(self, val: str):
         self.state = str(val)
