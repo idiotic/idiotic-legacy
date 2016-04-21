@@ -324,7 +324,7 @@ class StateIsCondition(ItemLambdaCondition):
                 # don't override an explicit one
                 kwargs['recalculate_delay'] = since
 
-            super().__init__(lambda i: any((h.state == state for h in item.state_history.since(age=since))), item, **kwargs)
+            super().__init__(lambda i: any((h.state == state for h in i.state_history.since(age=since, include_last=True))), item, **kwargs)
         else:
             super().__init__(lambda i: i.state == state, item, **kwargs)
 

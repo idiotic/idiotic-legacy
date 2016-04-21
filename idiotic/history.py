@@ -76,7 +76,7 @@ class History:
 
         return None
 
-    def since(self, time=None, age=None):
+    def since(self, time=None, age=None, include_last=False):
         if isinstance(time, int):
             time = datetime.datetime.fromtimestamp(seconds=time)
 
@@ -87,9 +87,13 @@ class History:
             if self.values[i].time > time:
                 yield self.values[i]
             else:
+                if include_last:
+                    yield self.values[i]
                 raise StopIteration()
+        else:
+            raise StopIteration()
 
-        return None
+        return []
 
     def all(self):
         return list(self.values)
