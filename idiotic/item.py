@@ -119,12 +119,21 @@ nature of its state.
         #: until it is enabled again
         self.enabled = True
 
-        self.display = display
-
         self.__command_history = history.History()
         self.__state_history = history.History()
 
         self.__state_overlay = []
+
+        #: A function that accepts a state and returns a new value to
+        #: use for it
+        self.state_translate = state_translate
+
+        #: A function that accepts a state and will raise an exception
+        #: when it is not valid. When a state is received that causes
+        #: an exception, it will be ignored
+        self.validator = validator
+
+        self.display = display
 
         idiotic.instance._register_item(self)
 
@@ -151,15 +160,6 @@ nature of its state.
                         interval.do(wrap_update, self, key, func)
             elif isinstance(update, tuple):
                 update[0].do(wrap_update, self, None, update[1])
-
-        #: A function that accepts a state and returns a new value to
-        #: use for it
-        self.state_translate = state_translate
-
-        #: A function that accepts a state and will raise an exception
-        #: when it is not valid. When a state is received that causes
-        #: an exception, it will be ignored
-        self.validator = validator
 
     def bind_on_command(self, function, **kwargs):
         LOG.debug("Binding on command for {}".format(self))
