@@ -67,7 +67,7 @@ nature of its state.
     """
     def __init__(self, name, groups=None, friends=None, bindings=None, update=None, tags=None,
                  ignore_redundant=False, aliases=None, id=None, state_translate=lambda s:s,
-                 validator=lambda s:s, disable_commands=[], display=lambda s:s.state):
+                 validator=lambda s:s, disable_commands=[], display=lambda s:str(s.state)):
         #: The user-friendly label for the item
         self.name = name
         self._state = None
