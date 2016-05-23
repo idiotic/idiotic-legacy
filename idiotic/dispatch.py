@@ -1,5 +1,11 @@
 from idiotic.utils import Filter
 from asyncio import coroutine, iscoroutine, Queue, QueueFull
+try:
+    # timeout is only on 3.5.2+
+    from asyncio import timeout
+except ImportError:
+    # But aiohttp has the same thing already
+    from aiohttp import Timeout as timeout
 import logging
 import functools
 
@@ -20,24 +26,26 @@ class Dispatcher:
             return True
         return False
 
-    def dispatch(self, event):
+    def dispatch(self, event, time=10):
         for action in (a for a, f in self.bindings if f.check(event)):
             LOG.debug("Dispatching {}".format(str(action)))
             try:
-                self.queue.put_nowait(functools.partial(action, event))
+                self.queue.put_nowait((functools.partial(action, event), timeout(time)))
             except QueueFull:
                 LOG.error("The unbounded queue is full! Pretty weird, eh?")
 
     @coroutine
     def run(self):
         while True:
-            func = yield from self.queue.get()
+            func, tout = yield from self.queue.get()
             try:
                 if not hasattr(func, "__name__"):
                     setattr(func, "__name__", "<unknown>")
-                res = yield from coroutine(func)()
+                with tout:
+                    res = yield from coroutine(func)()
 
                 while iscoroutine(res):
-                    res = yield from res
+                    with tout:
+                        res = yield from res
             except:
                 LOG.exception("Error while running {} from dispatch queue:".format(func))
