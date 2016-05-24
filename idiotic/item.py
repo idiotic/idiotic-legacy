@@ -39,7 +39,7 @@ def command(func):
 
         # Create an event and send it
         pre_event = event.CommandEvent(self, name, source, kind="before", args=args, kwargs=kwargs)
-        self.idiotic.dispatcher.dispatch(pre_event)
+        self.idiotic.dispatcher.dispatch_sync(pre_event)
 
         if not pre_event.canceled:
             func(self, *args, **kwargs)

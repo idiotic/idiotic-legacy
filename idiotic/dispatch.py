@@ -1,5 +1,5 @@
 from idiotic.utils import Filter
-from asyncio import coroutine, iscoroutine, Queue, QueueFull
+from asyncio import coroutine, iscoroutine, iscoroutinefunction, Queue, QueueFull, get_event_loop
 try:
     # timeout is only on 3.5.2+
     from asyncio import timeout
@@ -33,6 +33,20 @@ class Dispatcher:
                 self.queue.put_nowait((functools.partial(action, event), timeout(time)))
             except QueueFull:
                 LOG.error("The unbounded queue is full! Pretty weird, eh?")
+
+    def dispatch_sync(self, event, time=10):
+        loop = get_event_loop()
+
+        for target in (a for a, f in self.bindings if f.check(event)):
+            LOG.debug("Dispatching {} synchronously".format(str(target)))
+            try:
+                if iscoroutinefunction(target):
+                    # TODO: This doesn't really work how we want...
+                    loop.call_soon(target)
+                else:
+                    target(event)
+            except:
+                LOG.exception("Error while running {} in synchronous dispatch:".format(target))
 
     @coroutine
     def run(self):
