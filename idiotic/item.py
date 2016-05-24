@@ -2,6 +2,7 @@ import functools
 import datetime
 import logging
 import idiotic
+from collections import defaultdict
 from idiotic import event, history, utils
 from idiotic.declare import Watch
 from typing import Union, get_type_hints
@@ -55,6 +56,17 @@ def command(func):
             self.idiotic.dispatcher.dispatch(post_event)
     command_decorator.command_annotations = get_type_hints(func)
     return command_decorator
+
+
+def display_formatted(fmtstring):
+    def fmt(self):
+        return "?" if self.state is None else fmtstring.format(self.state)
+    return fmt
+
+def display_unit(unit, precision=2, multiplier=1, type="f", sep=" "):
+    def fmt(s):
+        return "?" if s.state is None else  "{value:.{precision}{type}}{sep}{unit}".format(value=s.state * multiplier, precision=precision, type=type, unit=unit, sep=sep)
+    return fmt
 
 class BaseItem:
     """
@@ -430,6 +442,8 @@ class Toggle(BaseItem):
     DisplayActiveInactive = lambda s: "Active" if s.state else "Inactive"
 
     def __init__(self, *args, **kwargs):
+        if "display" not in kwargs:
+            kwargs["display"] = Toggle.DisplayOnOff
         super().__init__(*args, **kwargs)
 
     def change_state(self, state):
@@ -471,14 +485,14 @@ class Dimmer(Toggle):
     DisplayOnOffPercent = lambda s: "On" if s.state == s.max else ("{:.0f}%".format(float(s.state)) if s.state and isinstance(s.state, float) else "Off")
 
     def __init__(self, *args, min=0, max=1, step=.05, **kwargs):
+        self.max = max
+        self.min = min
+        self.value = self.max
+        self.step = step
+
         if "display" not in kwargs:
             kwargs["display"] = Dimmer.DisplayOnOffPercent
         super().__init__(*args, **kwargs)
-
-        self.min = min
-        self.max = max
-        self.value = self.max
-        self.step = step
 
     def change_state(self, state):
         self.set(state)
@@ -542,6 +556,8 @@ class Trigger(BaseItem):
 
     """
     def __init__(self, *args, **kwargs):
+        if "display" not in kwargs:
+            kwargs["display"] = lambda s: ""
         super().__init__(*args, **kwargs)
 
     @default_command
@@ -552,18 +568,16 @@ class Trigger(BaseItem):
 class Number(BaseItem):
     """An item which represents a numerical quantity of some sort."""
 
-    def DisplayFormatted(fmtstring):
-        def fmt(s):
-            return fmtstring.format(s.kind(s.state))
-        return fmt
+    DisplayPercent = display_unit("%", multiplier=100, sep="")
+    DisplayWholePercent = display_unit("%", sep="")
 
     def __init__(self, *args, kind=float, **kwargs):
         self.kind = kind
-        if "display" in kwargs:
+        if "display" not in kwargs:
             if kind is float:
-                kwargs["display"] = Number.DisplayFormatted("{:.2f}")
+                kwargs["display"] = display_formatted("{:.2f}")
             elif kind is int:
-                kwargs["display"] = Number.DisplaFormatted("{:d}")
+                kwargs["display"] = display_formatted("{:d}")
         super().__init__(*args, validator=kind, **kwargs)
 
     def change_state(self, state):
@@ -621,9 +635,40 @@ class Motor(BaseItem):
 
     STATES_CONSTRAINED = STATES + (STOPPED_START, STOPPED_END)
 
+    _STATES_FB = defaultdict(lambda: "?", zip(STATES_CONSTRAINED, [
+        "Moving Forward", "Moving Back", "Stopped", "Back", "Forward"]))
+    DisplayForwardBack = lambda s: Motor._STATES_FB[s]
+
+    _STATES_UD = defaultdict(lambda: "?", zip(STATES_CONSTRAINED, [
+        "Moving Up", "Moving Down", "Stopped", "Down", "Up"]))
+    DisplayUpDown = lambda s: Motor._STATES_UD[s]
+
+    _STATES_DU = defaultdict(lambda: "?", zip(STATES_CONSTRAINED, [
+        "Moving Down", "Moving Up", "Stopped", "Up", "Down"]))
+    DisplayDownUp = lambda s: Motor._STATES_DU[s]
+
+    _STATES_LR = defaultdict(lambda: "?", zip(STATES_CONSTRAINED, [
+        "Moving Left", "Moving Right", "Stopped", "Right", "Left"]))
+    DisplayLeftRight = lambda s: Motor._STATES_LR[s]
+
+    _STATES_RL = defaultdict(lambda: "?", zip(STATES_CONSTRAINED, [
+        "Moving Right", "Moving Left", "Stopped", "Left", "Right"]))
+    DisplayRightLeft = lambda s: Motor._STATES_RL[s]
+
+    _STATES_CW = defaultdict(lambda: "?", zip(STATES_CONSTRAINED, [
+        "Moving Clockwise", "Moving Counterclockwise", "Stopped", "Start", "End"]))
+    DisplayCW = lambda s: Motor._STATES_CW[s]
+
+    _STATES_CCW = defaultdict(lambda: "?", zip(STATES_CONSTRAINED, [
+        "Moving Counterlockwise", "Moving Clockwise", "Stopped", "Start", "End"]))
+    DisplayCCW = lambda s: Motor._STATES_CCW[s]
+
     def __init__(self, *args, constrained=False, timeout=None, **kwargs):
         self.constrained = constrained
         self.timeout = timeout
+
+        if "display" not in kwargs:
+            kwargs["display"] = Motor.DisplayForwardBack
         super().__init__(*args, **kwargs)
 
     def change_state(self, state):
