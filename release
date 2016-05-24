@@ -35,7 +35,7 @@ read -r RESP
 # If this fails it's probably because there
 # is nothing to stash, which is OK.
 git stash save --include-untracked || true
-bumpversion --verbose --dry-run $BUMPTYPE
+bumpversion --verbose $BUMPTYPE
 python setup.py sdist bdist_wheel upload
 git push origin master --tags
 git stash pop || true
