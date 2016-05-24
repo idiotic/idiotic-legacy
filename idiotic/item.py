@@ -524,7 +524,12 @@ class Dimmer(Toggle):
 
     def json(self):
         res = super().json()
-        res.update({"value": self.value})
+        res.update({
+            "value": self.value,
+            "max": self.max,
+            "min": self.min,
+            "step": self.step,
+        })
         return res
 
 class SelectorToggle(BaseItem):
