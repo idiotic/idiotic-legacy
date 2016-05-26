@@ -14,6 +14,7 @@ def default_command(func):
     return func
 
 def command(func):
+    @functools.wraps(func)
     def command_decorator(self, *args, **kwargs):
         # If we get passed a source (e.g., UI, Rule, Binding), consume
         # it so we don't break our child function
@@ -55,7 +56,15 @@ def command(func):
             post_event = event.CommandEvent(self, name, source, kind="after", args=args, kwargs=kwargs)
             self.idiotic.dispatcher.dispatch(post_event)
     command_decorator.command_annotations = get_type_hints(func)
+    command_decorator.is_command = True
     return command_decorator
+
+
+def command_hints(**kwargs):
+    def command_hints_decorator(func):
+        func.command_hints = kwargs
+        return func
+    return command_hints_decorator
 
 
 def display_formatted(fmtstring):
@@ -311,13 +320,18 @@ nature of its state.
 
     def commands(self):
         return { k: {
+            "description": getattr(self, k).__doc__.split('\n')[0] if getattr(self, k).__doc__ else None,
             "arguments": {
-                l: w for l, w in getattr(self, k).command_annotations.items() if l != "return"
+                l: {
+                    "type": w,
+                    "default": None,
+                    "description": getattr(getattr(self, k), "command_hints", {}).get(l, None) or l.title()
+                } for l, w in getattr(self, k).command_annotations.items() if l != "return"
             }, "default": getattr(getattr(self, k), "default", False),
         }
                  for k in dir(self)
                  if callable(getattr(self, k, None))
-                 and getattr(self, k).__name__ == "command_decorator"
+                 and hasattr(getattr(self, k), "is_command")
                  and k not in self.disable_commands
         }
 
@@ -462,15 +476,18 @@ class Toggle(BaseItem):
 
     @command
     def on(self):
+        """Switch on"""
         self.state = True
 
     @command
     def off(self):
+        """Switch off"""
         self.state = False
 
     @default_command
     @command
     def toggle(self):
+        """Reverse the state"""
         if self.state:
             self.off()
         else:
@@ -498,19 +515,25 @@ class Dimmer(Toggle):
         self.set(state)
 
     @command
+    @command_hints(step="Amount to step by")
     def up(self, step: float = None):
+        """Increase the current value"""
         self.set(self.value + (step or self.step))
 
     @command
     def down(self, step: float = None):
+        """Decrease the current value"""
         self.set(self.value - (step or self.step))
 
     @command
     def full(self):
+        """Set the value to its maximum"""
         self.set(self.max)
 
     @command
+    @command_hints(val="New value")
     def set(self, val: float):
+        """Set a new value"""
         val = max(min(float(val), 1), 0)
         if not val:
             self.off()
@@ -520,6 +543,7 @@ class Dimmer(Toggle):
 
     @command
     def on(self):
+        """Turn on to the last value"""
         self.state = self.value
 
     def json(self):
@@ -544,15 +568,19 @@ class SelectorToggle(BaseItem):
 
     @command
     def off(self):
+        """Turn off"""
         self.last = self.state
         self.state = False
 
     @command
     def on(self):
+        """Turn on to the last selected option"""
         self.state = self.last
 
     @command
+    @command_hints(option="New option to select")
     def select(self, option: str):
+        """Select a new option"""
         self.state = option
 
 class Trigger(BaseItem):
@@ -568,6 +596,7 @@ class Trigger(BaseItem):
     @default_command
     @command
     def trigger(self):
+        """Activate"""
         pass
 
 class Number(BaseItem):
@@ -590,21 +619,27 @@ class Number(BaseItem):
 
     @default_command
     @command
+    @command_hints(val="New value")
     def set(self, val: Union[int, float]):
+        """Set a new value"""
         try:
             self.state = self.kind(val)
         except (ValueError, TypeError):
             LOG.warn("Invalid {} argument to Number.set: {}".format(self.kind.__name__, val))
 
     @command
+    @command_hints(val="Amount to add")
     def add(self, val: Union[int, float]):
+        """Add to the value"""
         try:
             self.state += self.kind(val)
         except (ValueError, TypeError):
             LOG.warn("Invalid {} argument to Number.add: {}".format(self.kind.__name__, val))
 
     @command
+    @command_hints(val="Amount to subtract")
     def sub(self, val: Union[int, float]):
+        """Subtract from the value"""
         try:
             self.state -= self.kind(val)
         except (ValueError, TypeError):
@@ -621,7 +656,9 @@ class Text(BaseItem):
 
     @default_command
     @command
+    @command_hints(val="New text")
     def set(self, val: str):
+        """Update the text"""
         self.state = str(val)
 
 class Motor(BaseItem):
@@ -686,6 +723,7 @@ class Motor(BaseItem):
 
     @command
     def forward(self):
+        """Move forward"""
         if self.state != Motor.STOPPED_END or not self.constrained:
             self.state = Motor.MOVING_FORWARD
             if self.timeout:
@@ -695,6 +733,7 @@ class Motor(BaseItem):
 
     @command
     def reverse(self):
+        """Move backward"""
         if self.state != Motor.STOPPED_START or not self.constrained:
             self.state = Motor.MOVING_REVERSE
             if self.timeout:
@@ -704,6 +743,7 @@ class Motor(BaseItem):
 
     @command
     def stop(self):
+        """Stop movement"""
         self.state = Motor.STOPPED
 
 class Group(BaseItem):
