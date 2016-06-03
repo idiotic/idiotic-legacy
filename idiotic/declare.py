@@ -62,7 +62,7 @@ class Condition:
                 self.parent.child_changed(self, self.state)
 
             if self.recalculate_delay:
-                timer.Timer(self.recalculate_delay, self.recalculate).start()
+                timer.Timer(self.recalculate_delay + 1, self.recalculate).start()
         else:
             LOG.debug("{}: State stayed the same.".format(self))
 
