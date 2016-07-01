@@ -65,6 +65,8 @@ class Condition:
                 timer.Timer(self.recalculate_delay + 1, self.recalculate).start()
         else:
             LOG.debug("{}: State stayed the same.".format(self))
+            if self.recalculate_delay:
+                timer.Timer(self.recalculate_delay / 2, self.recalculate).start()
 
     def calculate(self):
         return False
